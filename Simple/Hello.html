@@ -1,0 +1,65 @@
+<!-- <!DOCTYPE html>
+<html lang = "en">
+    <head>
+        <meta charset="UTF-8"/>
+    </head>
+    <title> Leap year</title>
+    <body>
+        <div>
+            <input type="number" id = "yearInput" placeholder="enter year">
+            <button onclick="handleCheck()">cheack</button>
+            <p id="result"></p>
+        </div>
+    </body>
+</html>
+
+<script>
+    function handleCheck() {
+        const year = document.getElementById("yearInput").value;
+        const yearContent = document.getElementById("result");
+        if(year == "" || isNaN(year)){
+            yearContent.textContent = "Please Enter valid year";
+            yearContent.style.color = "red";
+            return;
+        }
+        const isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if(isLeap){
+             yearContent.textContent = `${year} is Leap year`;
+            yearContent.style.color = "green";
+        }
+        else{
+            yearContent.textContent = `${year} is Leap year`;
+            yearContent.style.color = "red";
+        }
+    }
+</script> -->
+
+
+
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="c" style="height:200px;overflow:auto;border:1px solid #000"></div>
+<input id="i" placeholder="Type..." />
+<button onclick="s()">Send</button>
+
+<script>
+function a(t){c.innerHTML+=t+"<br>";c.scrollTop=c.scrollHeight}
+function r(t){
+  t=t.toLowerCase();
+  if(t=="hi")return"hello";
+  if(t.includes("time"))return new Date().toLocaleTimeString();
+  return"I don't understand";
+}
+function s(){
+  let t=i.value.trim();
+  if(!t)return;
+  a("You: "+t);
+  a("Bot: "+r(t));
+  i.value="";
+}
+</script>
+
+</body>
+</html>

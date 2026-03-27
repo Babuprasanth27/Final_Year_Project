@@ -1,0 +1,6 @@
+Model,Score
+Random Forest,100.0
+SVM,100.0
+XGBoost,100.0
+ANN,100.0
+KMeans (Silhouette Score),0.4985
