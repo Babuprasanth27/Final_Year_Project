@@ -153,5 +153,4 @@ This project demonstrates real-world DevOps practices including containerization
 
 ## 👨‍💻 Author
 
-**Your Name**
-Babuprasanth R
+**Babuprasanth R**
