@@ -9,7 +9,7 @@
 #     Automatically filters by local IP if provided, to capture only relevant packets.
 #     """
 
-#     print(f"🔍 Capturing live packets for {duration} seconds...")
+#     print(f"\n🔍 Capturing live packets for {duration} seconds...")
 #     if not filter_ip:
 #         # Automatically detect and use local IP for filtering
 #         try:
@@ -58,7 +58,7 @@
 #                 total_backward_length += len(pkt)
 #                 backward_times.append(now)
 
-#     flow_duration = max(end_time - start_time, 1e-6)  # prevent div by zero
+#     flow_duration = max(end_time - start_time, 1e-6)  # prevent division by zero
 
 #     # Derived features
 #     forward_packet_length_mean = total_forward_length / (total_forward_packets or 1)
@@ -101,6 +101,30 @@
 #             flow_bytes_per_seconds
 #         ]])
 
+#         #  Define names for each feature
+#         feature_names = [
+#             "protocol",
+#             "flow_duration",
+#             "total_forward_packets",
+#             "total_backward_packets",
+#             "total_forward_length",
+#             "total_backward_length",
+#             "forward_packet_length_mean",
+#             "backward_packet_length_mean",
+#             "forward_pps",
+#             "backward_pps",
+#             "forward_iat_mean",
+#             "backward_iat_mean",
+#             "flow_iat_mean",
+#             "flow_packets_per_seconds",
+#             "flow_bytes_per_seconds"
+#         ]
+
+#         # ✅ Print features neatly to the terminal
+#         print("\n📊 Extracted Flow Features:")
+#         for name, value in zip(feature_names, features[0]):
+#             print(f"   {name:<30}: {value:.6f}")
+
 #     if return_meta:
 #         return {
 #             "features": features,
@@ -114,39 +138,91 @@
 #         }
 
 #     return features
-from scapy.all import sniff, IP
-import numpy as np
+
+
+# #  Run it directly for testing (prints results in terminal)
+# if __name__ == "__main__":
+#     while True:
+#         capture_live_flow(duration=10)
+#         print("\n--- Waiting 3 seconds before next capture ---\n")
+#         time.sleep(3)
+from scapy.all import sniff, IP, conf
 import time
+import numpy as np
 import socket
+
+
+# ✅ Get local IP (works better than hostname in Docker/Windows)
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
 
 def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
     """
-    Capture live packets for a few seconds and extract basic flow-level features.
-    Automatically filters by local IP if provided, to capture only relevant packets.
+    Capture live packets and extract flow-level features
     """
 
     print(f"\n🔍 Capturing live packets for {duration} seconds...")
+
+    # ✅ Show interface (important for debugging)
+    print(f"🖧 Default interface: {conf.iface}")
+
+    # ✅ Get correct IP
     if not filter_ip:
-        # Automatically detect and use local IP for filtering
-        try:
-            filter_ip = socket.gethostbyname(socket.gethostname())
+        filter_ip = get_local_ip()
+        if filter_ip:
             print(f"📡 Auto-detected local IP: {filter_ip}")
-        except Exception as e:
-            print(f"⚠️ Could not auto-detect IP: {e}")
-            filter_ip = None
+        else:
+            print("⚠️ Could not detect local IP")
     else:
         print(f"📡 Filtering packets for IP: {filter_ip}")
 
-    # Start packet capture
     start_time = time.time()
-    packets = sniff(timeout=duration)
+
+    # ✅ FIX: Use Windows-compatible interface (NOT "any")
+    try:
+        iface = conf.iface
+        print(f"🧠 Using interface: {iface}")
+
+        packets = sniff(
+            iface=iface,
+            timeout=duration,
+            store=True
+        )
+    except Exception as e:
+        print(f"❌ Sniff error: {e}")
+        return {
+            "features": np.zeros((1, 15)),
+            "meta": {
+                "packet_count": 0,
+                "src_ip": None,
+                "dst_ip": None,
+                "duration": 0,
+                "protocol": 0
+            },
+        }
+
     end_time = time.time()
 
-    total_forward_packets = total_backward_packets = 0
-    total_forward_length = total_backward_length = 0
-    forward_times, backward_times = [], []
+    print(f"📦 Total raw packets captured: {len(packets)}")
 
-    src_ip = dst_ip = None
+    total_forward_packets = 0
+    total_backward_packets = 0
+    total_forward_length = 0
+    total_backward_length = 0
+
+    forward_times = []
+    backward_times = []
+
+    src_ip = None
+    dst_ip = None
     protocol = 0
 
     for pkt in packets:
@@ -155,7 +231,7 @@ def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
             dst = pkt[IP].dst
             protocol = pkt[IP].proto
 
-            # Skip unrelated traffic if filter is applied
+            # ✅ Filter only relevant traffic
             if filter_ip and (src != filter_ip and dst != filter_ip):
                 continue
 
@@ -174,9 +250,9 @@ def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
                 total_backward_length += len(pkt)
                 backward_times.append(now)
 
-    flow_duration = max(end_time - start_time, 1e-6)  # prevent division by zero
+    flow_duration = max(end_time - start_time, 1e-6)
 
-    # Derived features
+    # ✅ Feature calculations
     forward_packet_length_mean = total_forward_length / (total_forward_packets or 1)
     backward_packet_length_mean = total_backward_length / (total_backward_packets or 1)
 
@@ -192,11 +268,11 @@ def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
 
     total_packets = total_forward_packets + total_backward_packets
 
-    print(f"✅ Capture complete. Total packets: {total_packets}")
+    print(f"✅ Filtered packets used: {total_packets}")
 
-    # Handle empty capture
+    # ✅ Handle empty capture
     if total_packets == 0:
-        print("⚠️ Warning: No packets captured. Returning zero vector.")
+        print("⚠️ No packets after filtering")
         features = np.zeros((1, 15))
     else:
         features = np.array([[
@@ -217,7 +293,7 @@ def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
             flow_bytes_per_seconds
         ]])
 
-        #  Define names for each feature
+        # Debug print
         feature_names = [
             "protocol",
             "flow_duration",
@@ -236,29 +312,27 @@ def capture_live_flow(duration=10, filter_ip=None, return_meta=False):
             "flow_bytes_per_seconds"
         ]
 
-        # ✅ Print features neatly to the terminal
-        print("\n📊 Extracted Flow Features:")
+        print("\n📊 Extracted Features:")
         for name, value in zip(feature_names, features[0]):
-            print(f"   {name:<30}: {value:.6f}")
+            print(f"{name:<30}: {value:.6f}")
 
-    if return_meta:
-        return {
-            "features": features,
-            "meta": {
-                "packet_count": total_packets,
-                "src_ip": src_ip,
-                "dst_ip": dst_ip,
-                "duration": round(flow_duration, 4),
-                "protocol": protocol
-            },
-        }
-
-    return features
+    # ✅ ALWAYS return dictionary (fixes your API crash)
+    return {
+        "features": features,
+        "meta": {
+            "packet_count": total_packets,
+            "src_ip": src_ip,
+            "dst_ip": dst_ip,
+            "duration": round(flow_duration, 4),
+            "protocol": protocol
+        },
+    }
 
 
-#  Run it directly for testing (prints results in terminal)
+# ✅ Standalone test
 if __name__ == "__main__":
     while True:
-        capture_live_flow(duration=10)
-        print("\n--- Waiting 3 seconds before next capture ---\n")
+        result = capture_live_flow(duration=5)
+        print(result["meta"])
+        print("\n--- Waiting 3 seconds ---\n")
         time.sleep(3)

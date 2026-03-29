@@ -46,11 +46,18 @@
 
 import streamlit as st
 import requests
+import os
 from db import init_db
 from logger import log_attack
 from utils import get_severity
+from dotenv import load_dotenv
 
-API_URL = "http://127.0.0.1:8000/predict/live"
+
+load_dotenv()
+
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+LIVE_API = f"{BASE_URL}/predict/live"
+
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -77,7 +84,7 @@ duration = st.slider("Capture Duration (seconds)", 2, 30, 5)
 if st.button("🚀 Start Live Detection", use_container_width=True):
 
     with st.spinner("Capturing live network traffic..."):
-        resp = requests.get(f"{API_URL}?duration={duration}")
+        resp = requests.get(f"{LIVE_API}?duration={duration}")
 
     if resp.status_code != 200:
         st.error("❌ Live API error")

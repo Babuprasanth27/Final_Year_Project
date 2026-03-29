@@ -1,10 +1,18 @@
 import streamlit as st
 import requests
+import os
 from db import init_db
 from logger import log_attack
 from utils import get_severity
+from dotenv import load_dotenv
 
-API_URL = "http://127.0.0.1:8000/predict/manual"
+
+load_dotenv()
+
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+
+MANUAL_API = f"{BASE_URL}/predict/manual"
+
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -90,7 +98,7 @@ if st.button("🚀 Run Detection", use_container_width=True):
     }
 
     with st.spinner("Analyzing traffic..."):
-        resp = requests.post(API_URL, json=payload)
+        resp = requests.post(MANUAL_API, json=payload)
 
     if resp.status_code != 200:
         st.error("❌ Backend API error")
